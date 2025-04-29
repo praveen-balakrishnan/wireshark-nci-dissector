@@ -116,10 +116,10 @@ static void handle_cmd(proto_tree* tree, tvbuff_t *tvb, int* hoffset, proto_item
 {
     proto_tree_add_item(tree, hf_nci_gid, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
 
-    uint8_t gid = tvb_get_uint8(tvb, *hoffset) & 0x0F;
+    uint8_t gid = tvb_get_uint8(tvb, *hoffset) & NCI_GID_BYTEMASK;
     *hoffset += 1;
 
-    uint8_t oid = tvb_get_uint8(tvb, *hoffset) & 0x3F;
+    uint8_t oid = tvb_get_uint8(tvb, *hoffset) & NCI_OID_BYTEMASK;
     *hoffset += 1;
 
     switch (gid) {
@@ -152,18 +152,13 @@ static void handle_data(void)
 
 static int dissect_nci(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
+    // Initialise column data.
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "NCI");
     col_clear(pinfo->cinfo,COL_INFO);
 
-    proto_item *ti = proto_tree_add_item(tree, proto_nci, tvb, 0, -1, ENC_NA);
     uint8_t packet_type = tvb_get_uint8(tvb, 0) >> 5;
-    proto_item_append_text(ti, ", Type %s",
-        val_to_str(packet_type, nci_mt_vals, "Unknown (0x%02x)"));
-    proto_tree *nci_tree = proto_item_add_subtree(ti, ett_nci);
-    int offset = 0;
-    proto_tree_add_item(nci_tree, hf_nci_mt, tvb, 0, 1, ENC_BIG_ENDIAN);
-    proto_tree_add_item(nci_tree, hf_nci_pbf, tvb, 0, 1, ENC_BIG_ENDIAN);
 
+    // Identify source and destination.
     if ((packet_type & NCI_MT_CMD) == NCI_MT_CMD) {
         col_set_str(pinfo->cinfo, COL_DEF_SRC, "DH");
         col_set_str(pinfo->cinfo, COL_DEF_DST, "NFCC");
@@ -173,52 +168,63 @@ static int dissect_nci(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void
         col_set_str(pinfo->cinfo, COL_DEF_DST, "DH");
     }
 
-    // CMD/RESP/Notif
-    if (packet_type)
+    proto_item *ti = proto_tree_add_item(tree, proto_nci, tvb, 0, -1, ENC_NA);
+    proto_item_append_text(ti, ", Type %s",
+        val_to_str(packet_type, nci_mt_vals, "Unknown (0x%02x)"));
+    proto_tree *nci_tree = proto_item_add_subtree(ti, ett_nci);
+    int offset = 0;
+    proto_tree_add_item(nci_tree, hf_nci_mt, tvb, 0, 1, ENC_BIG_ENDIAN);
+    proto_tree_add_item(nci_tree, hf_nci_pbf, tvb, 0, 1, ENC_BIG_ENDIAN);
+
+
+    if (packet_type) {
+        // Handle CMD/RSP/NTF messages.
         handle_cmd(nci_tree, tvb, &offset, ti);
-    else
+    } else {
         handle_data();
+    }
 
     return tvb_captured_length(tvb);
 }
 
 void proto_register_nci(void)
 {
+    // Register different items that show up in the Wireshark GUI.
     static hf_register_info hf[] = {
         { &hf_nci_mt,
             { "Message Type", "nci.mt",
             FT_UINT8, BASE_DEC,
-            VALS(nci_mt_vals), 0xE0,
+            VALS(nci_mt_vals), NCI_MT_BYTEMASK,
             NULL, HFILL }
         },
         { &hf_nci_pbf,
             { "Packet Boundary Flag", "nci.pbf",
             FT_UINT8, BASE_DEC,
-            VALS(nci_pbf_vals), 0x10,
+            VALS(nci_pbf_vals), NCI_PBF_BYTEMASK,
             NULL, HFILL }
         },
         { &hf_nci_gid,
             { "GID", "nci.gid",
             FT_UINT8, BASE_DEC,
-            VALS(nci_gid_vals), 0x0F,
+            VALS(nci_gid_vals), NCI_GID_BYTEMASK,
             NULL, HFILL }
         },
         { &hf_nci_oid_nciCore,
             { "OID", "nci.oid",
             FT_UINT8, BASE_DEC,
-            VALS(nci_oid_nci_core_vals), 0x3F,
+            VALS(nci_oid_nci_core_vals), NCI_OID_BYTEMASK,
             NULL, HFILL }
         },
         { &hf_nci_oid_rfMgmt,
             { "OID", "nci.oid",
             FT_UINT8, BASE_DEC,
-            VALS(nci_oid_rf_mgmt_vals), 0x3F,
+            VALS(nci_oid_rf_mgmt_vals), NCI_OID_BYTEMASK,
             NULL, HFILL }
         },
         { &hf_nci_oid_nfceeMgmt,
             { "OID", "nci.oid",
             FT_UINT8, BASE_DEC,
-            VALS(nci_oid_nfcee_mgmt_vals), 0x3F,
+            VALS(nci_oid_nfcee_mgmt_vals), NCI_OID_BYTEMASK,
             NULL, HFILL }
         },
         { &hf_nic_payload_len,
@@ -229,29 +235,31 @@ void proto_register_nci(void)
         }
     };
 
-    /* Setup protocol subtree array */
+    // Protocol subtree array
     static int *ett[] = {
         &ett_nci
     };
 
     proto_nci = proto_register_protocol (
-        "NCI Protocol", /* protocol name        */
-        "NCI",          /* protocol short name  */
-        "nci"           /* protocol filter_name */
+        "NCI Protocol", // protocol name
+        "NCI",          // protocol short name
+        "nci"           // protocol filter_name
         );
 
     proto_register_field_array(proto_nci, hf, array_length(hf));
     proto_register_subtree_array(ett, array_length(ett));
 
     nci_handle = register_dissector_with_description (
-        "nci",          /* dissector name           */
-        "NCI Protocol", /* dissector description    */
-        dissect_nci,    /* dissector function       */
-        proto_nci       /* protocol being dissected */
+        "nci",          // dissector name
+        "NCI Protocol", // dissector description
+        dissect_nci,    // dissector function
+        proto_nci       // protocol being dissected
         );
 }
 
 void proto_reg_handoff_nci(void)
 {
+    // We register the dissector to dissect pcap capture files with
+    // a specified DLT_USER.
     dissector_add_uint("wtap_encap", NCI_DLT_USER, nci_handle);
 }

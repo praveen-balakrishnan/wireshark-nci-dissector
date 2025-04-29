@@ -26,6 +26,11 @@
 
 #define NCI_DLT_USER                        WTAP_ENCAP_USER0
 
+#define NCI_MT_BYTEMASK                     0b11100000
+#define NCI_PBF_BYTEMASK                    0b00010000
+#define NCI_GID_BYTEMASK                    0b00001111
+#define NCI_OID_BYTEMASK                    0b00111111
+
 #define NCI_MT_DATA                         0b000
 #define NCI_MT_CMD                          0b001
 #define NCI_MT_RSP                          0b010

@@ -21,7 +21,7 @@
 #include "packet-nci.h"
 #include <epan/packet.h>
 
-// Refer to the 
+// Refer to the NFC Controller Interface (NCI) Specification v2.0
 
 static int proto_nci;
 

@@ -122,22 +122,28 @@ static void handle_cmd(proto_tree* tree, tvbuff_t *tvb, int* hoffset, proto_item
     uint8_t oid = tvb_get_uint8(tvb, *hoffset) & NCI_OID_BYTEMASK;
     *hoffset += 1;
 
+    int hf_item = 0;
+    const value_string* strvals;
+
     switch (gid) {
     case NCI_GID_NCI_CORE:
-        proto_item_append_text(ti, ", Packet: %s",
-            val_to_str(oid, nci_oid_nci_core_vals, "Unknown (0x%02x)"));
-        proto_tree_add_item(tree, hf_nci_oid_nciCore, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
+        hf_item = hf_nci_oid_nciCore;
+        strvals = nci_oid_nci_core_vals;
         break;
     case NCI_GID_RF_MGMT:
-        proto_item_append_text(ti, ", Packet: %s",
-            val_to_str(oid, nci_oid_rf_mgmt_vals, "Unknown (0x%02x)"));
-        proto_tree_add_item(tree, hf_nci_oid_rfMgmt, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
+        hf_item = hf_nci_oid_rfMgmt;
+        strvals = nci_oid_rf_mgmt_vals;
         break;
     case NCI_GID_NFCEE_MGMT:
-        proto_item_append_text(ti, ", Packet: %s",
-            val_to_str(oid, nci_oid_nfcee_mgmt_vals, "Unknown (0x%02x)"));
-        proto_tree_add_item(tree, hf_nci_oid_nfceeMgmt, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
+        hf_item = hf_nci_oid_nfceeMgmt;
+        strvals = nci_oid_nfcee_mgmt_vals;
         break;
+    }
+    
+    if (hf_item) {
+        proto_item_append_text(ti, ", Packet: %s",
+            val_to_str(oid, strvals, "Unknown (0x%02x)"));
+        proto_tree_add_item(tree, hf_item, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
     }
 
     //uint8_t payload_length = tvb_get_uint8(tvb, *hoffset);

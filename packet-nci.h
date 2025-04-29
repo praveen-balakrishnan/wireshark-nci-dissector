@@ -20,6 +20,12 @@
 #ifndef PACKET_NCI_H
 #define PACKET_NCI_H
 
+#include <wiretap/wtap.h>
+
+// Refer to the NFC Controller Interface (NCI) Specification v2.0
+
+#define NCI_DLT_USER                        WTAP_ENCAP_USER0
+
 #define NCI_MT_DATA                         0b000
 #define NCI_MT_CMD                          0b001
 #define NCI_MT_RSP                          0b010

@@ -20,7 +20,6 @@
 #include "config.h"
 #include "packet-nci.h"
 #include <epan/packet.h>
-#include <wiretap/wtap.h>
 
 // Refer to the 
 
@@ -254,5 +253,5 @@ void proto_register_nci(void)
 
 void proto_reg_handoff_nci(void)
 {
-    dissector_add_uint("wtap_encap", WTAP_ENCAP_USER0, nci_handle);
+    dissector_add_uint("wtap_encap", NCI_DLT_USER, nci_handle);
 }

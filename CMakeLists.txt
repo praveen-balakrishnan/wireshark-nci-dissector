@@ -12,6 +12,7 @@ include(WiresharkPlugin)
 set_module_info(nci 1 0 0 0)
 
 set(DISSECTOR_SRC
+	nci_core.c
 	packet-nci.c
 )
 

@@ -18,6 +18,7 @@
 */
     
 #include "config.h"
+#include "nci_core.h"
 #include "packet-nci.h"
 #include <epan/packet.h>
 
@@ -112,7 +113,7 @@ static const value_string nci_oid_nfcee_mgmt_vals[] = {
 
 static dissector_handle_t nci_handle;
 
-static void handle_cmd(proto_tree* tree, tvbuff_t *tvb, int* hoffset, proto_item* ti)
+static void handle_cmd(int pkt_type, proto_tree* tree, tvbuff_t *tvb, int* hoffset, proto_item* ti)
 {
     proto_tree_add_item(tree, hf_nci_gid, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
 
@@ -120,7 +121,6 @@ static void handle_cmd(proto_tree* tree, tvbuff_t *tvb, int* hoffset, proto_item
     *hoffset += 1;
 
     uint8_t oid = tvb_get_uint8(tvb, *hoffset) & NCI_OID_BYTEMASK;
-    *hoffset += 1;
 
     int hf_item = 0;
     const value_string* strvals;
@@ -146,9 +146,19 @@ static void handle_cmd(proto_tree* tree, tvbuff_t *tvb, int* hoffset, proto_item
         proto_tree_add_item(tree, hf_item, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
     }
 
+    *hoffset += 1;
+
     //uint8_t payload_length = tvb_get_uint8(tvb, *hoffset);
     proto_item* plen_item = proto_tree_add_item(tree, hf_nic_payload_len, tvb, *hoffset, 1, ENC_BIG_ENDIAN);
     proto_item_append_text(plen_item, " bytes");
+
+    *hoffset += 1;
+
+    switch (gid) {
+    case NCI_GID_NCI_CORE:
+        handle_nci_core(oid, pkt_type, tree, tvb, hoffset);
+        break;
+    }
 }
 
 static void handle_data(void)
@@ -185,7 +195,7 @@ static int dissect_nci(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void
 
     if (packet_type) {
         // Handle CMD/RSP/NTF messages.
-        handle_cmd(nci_tree, tvb, &offset, ti);
+        handle_cmd(packet_type, nci_tree, tvb, &offset, ti);
     } else {
         handle_data();
     }

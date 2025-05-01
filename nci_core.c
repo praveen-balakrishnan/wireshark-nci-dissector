@@ -145,6 +145,14 @@ void handle_reset(int pkt_type, proto_tree* tree, tvbuff_t *tvb, int* hoffset)
     }
 }
 
+void handle_init(int pkt_type, proto_tree* tree, tvbuff_t *tvb, int* hoffset)
+{
+    if ((pkt_type & NCI_MT_CMD) == NCI_MT_CMD) {
+    } else if ((pkt_type & NCI_MT_RSP) == NCI_MT_RSP) {
+    } else if ((pkt_type & NCI_MT_NTF) == NCI_MT_NTF) {
+    }
+}
+
 void handle_nci_core(int oid, int pkt_type, proto_tree* tree, tvbuff_t *tvb, int* hoffset) {
     switch (oid) {
     case NCI_OID_CORE_RESET:
